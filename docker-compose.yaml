@@ -1,0 +1,22 @@
+
+
+services:
+  slam_toolbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ros_slam_toolbox
+    stdin_open: true
+    tty: true
+    privileged: true  # Required to access /dev/*
+    environment:
+      - ROS_DISTRO=humble
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - ./:/root/ws  # Mounts current directory as workspace
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev:/dev    # Shares all host devices
+    command: bash    # Keeps the container running interactively
+
+ 

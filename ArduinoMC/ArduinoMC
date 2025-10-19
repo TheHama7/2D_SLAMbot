@@ -1,0 +1,200 @@
+#include <Wire.h>
+#include <micro_ros_arduino.h>
+#include <geometry_msgs/msg/twist.h>
+#include <sensor_msgs/msg/imu.h>
+#include <nav_msgs/msg/odometry.h>
+#include "MPU6050.h"
+
+// ---------- Motor Pins ----------
+#define ENA 5
+#define IN1 7
+#define IN2 8
+#define ENB 6
+#define IN3 9
+#define IN4 10
+
+// ---------- Encoder Pins ----------
+#define LEFT_ENC_A 2
+#define LEFT_ENC_B 4
+#define RIGHT_ENC_A 3
+#define RIGHT_ENC_B 5
+
+// ---------- Robot Geometry ----------
+const float WHEEL_RADIUS = 0.03;   // meters
+const float WHEEL_BASE   = 0.16;   // meters
+const int   ENCODER_TICKS = 600;   // per revolution
+
+volatile long left_ticks = 0;
+volatile long right_ticks = 0;
+long prev_left_ticks = 0, prev_right_ticks = 0;
+
+// ---------- IMU ----------
+MPU6050 mpu;
+float ax, ay, az, gx, gy, gz;
+
+// ---------- micro-ROS ----------
+rcl_subscription_t cmd_sub;
+geometry_msgs__msg__Twist cmd_msg;
+
+rcl_publisher_t imu_pub;
+sensor_msgs__msg__Imu imu_msg;
+
+rcl_publisher_t odom_pub;
+nav_msgs__msg__Odometry odom_msg;
+
+rcl_node_t node;
+rclc_executor_t executor;
+rclc_support_t support;
+rcl_allocator_t allocator;
+
+unsigned long last_imu_pub = 0;
+unsigned long last_odom_pub = 0;
+
+// ---------- Encoder ISRs ----------
+void leftEncoderISR() {
+  if (digitalRead(LEFT_ENC_B))
+    left_ticks++;
+  else
+    left_ticks--;
+}
+
+void rightEncoderISR() {
+  if (digitalRead(RIGHT_ENC_B))
+    right_ticks++;
+  else
+    right_ticks--;
+}
+
+// ---------- Motor Control ----------
+void setMotorSpeed(int left, int right) {
+  left = constrain(left, -255, 255);
+  right = constrain(right, -255, 255);
+
+  // Left
+  digitalWrite(IN1, left > 0);
+  digitalWrite(IN2, left < 0);
+  analogWrite(ENA, abs(left));
+
+  // Right
+  digitalWrite(IN3, right > 0);
+  digitalWrite(IN4, right < 0);
+  analogWrite(ENB, abs(right));
+}
+
+void cmdVelCallback(const void *msgin) {
+  const geometry_msgs__msg__Twist *tw = (const geometry_msgs__msg__Twist *)msgin;
+  float v = tw->linear.x;
+  float w = tw->angular.z;
+  float vL = v - w * WHEEL_BASE / 2.0;
+  float vR = v + w * WHEEL_BASE / 2.0;
+
+  int leftPWM  = (int)(vL * 255 / 0.5); // assuming 0.5 m/s = full speed
+  int rightPWM = (int)(vR * 255 / 0.5);
+
+  setMotorSpeed(leftPWM, rightPWM);
+}
+
+// ---------- IMU Publisher ----------
+void publishIMU() {
+  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  imu_msg.linear_acceleration.x = ax / 16384.0;
+  imu_msg.linear_acceleration.y = ay / 16384.0;
+  imu_msg.linear_acceleration.z = az / 16384.0;
+  imu_msg.angular_velocity.x = gx / 131.0 * (M_PI / 180.0);
+  imu_msg.angular_velocity.y = gy / 131.0 * (M_PI / 180.0);
+  imu_msg.angular_velocity.z = gz / 131.0 * (M_PI / 180.0);
+  imu_msg.header.stamp.sec = millis() / 1000;
+  imu_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+  imu_msg.header.frame_id.data = (char*)"imu_link";
+  imu_msg.header.frame_id.size = 8;
+  imu_msg.header.frame_id.capacity = 8;
+  rcl_publish(&imu_pub, &imu_msg, NULL);
+}
+
+// ---------- Odom Publisher ----------
+float x = 0.0, y = 0.0, th = 0.0;
+void publishOdom() {
+  long dl = left_ticks - prev_left_ticks;
+  long dr = right_ticks - prev_right_ticks;
+  prev_left_ticks = left_ticks;
+  prev_right_ticks = right_ticks;
+
+  float distL = (2 * M_PI * WHEEL_RADIUS * dl) / ENCODER_TICKS;
+  float distR = (2 * M_PI * WHEEL_RADIUS * dr) / ENCODER_TICKS;
+  float dist = (distL + distR) / 2.0;
+  float dth  = (distR - distL) / WHEEL_BASE;
+
+  x += dist * cos(th + dth / 2.0);
+  y += dist * sin(th + dth / 2.0);
+  th += dth;
+
+  odom_msg.pose.pose.position.x = x;
+  odom_msg.pose.pose.position.y = y;
+  odom_msg.pose.pose.orientation.z = sin(th / 2.0);
+  odom_msg.pose.pose.orientation.w = cos(th / 2.0);
+  odom_msg.twist.twist.linear.x = dist / 0.05;  // assuming 20 Hz update
+  odom_msg.twist.twist.angular.z = dth / 0.05;
+
+  odom_msg.header.stamp.sec = millis() / 1000;
+  odom_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+  odom_msg.header.frame_id.data = (char*)"odom";
+  odom_msg.header.frame_id.size = 5;
+  odom_msg.child_frame_id.data = (char*)"base_link";
+  odom_msg.child_frame_id.size = 10;
+
+  rcl_publish(&odom_pub, &odom_msg, NULL);
+}
+
+// ---------- Setup ----------
+void setup() {
+  // Motors
+  pinMode(ENA, OUTPUT); pinMode(ENB, OUTPUT);
+  pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+  setMotorSpeed(0, 0);
+
+  // Encoders
+  pinMode(LEFT_ENC_A, INPUT_PULLUP);
+  pinMode(LEFT_ENC_B, INPUT_PULLUP);
+  pinMode(RIGHT_ENC_A, INPUT_PULLUP);
+  pinMode(RIGHT_ENC_B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(LEFT_ENC_A), leftEncoderISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(RIGHT_ENC_A), rightEncoderISR, CHANGE);
+
+  // IMU
+  Wire.begin(); mpu.initialize();
+
+  // micro-ROS
+  set_microros_transports();
+  allocator = rcl_get_default_allocator();
+  rclc_support_init(&support, 0, NULL, &allocator);
+  rclc_node_init_default(&node, "arduino_base_node", "", &support);
+
+  // ROS Interfaces
+  rclc_subscription_init_default(&cmd_sub, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel");
+
+  rclc_publisher_init_default(&imu_pub, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), "imu/data_raw");
+
+  rclc_publisher_init_default(&odom_pub, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), "odom");
+
+  rclc_executor_init(&executor, &support.context, 2, &allocator);
+  rclc_executor_add_subscription(&executor, &cmd_sub, &cmd_msg, &cmdVelCallback, ON_NEW_DATA);
+}
+
+// ---------- Loop ----------
+void loop() {
+  unsigned long now = millis();
+  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(5));
+
+  if (now - last_imu_pub > 20) {  // 50 Hz
+    publishIMU();
+    last_imu_pub = now;
+  }
+  if (now - last_odom_pub > 50) { // 20 Hz
+    publishOdom();
+    last_odom_pub = now;
+  }
+}

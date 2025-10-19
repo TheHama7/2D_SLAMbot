@@ -16,8 +16,26 @@ RUN apt-get update && apt-get install -y \
     ros-humble-diagnostics \
     ros-humble-joint-state-publisher \
     ros-humble-robot-state-publisher \
-    ros-humble-gazebo-ros-pkgs \
-    ros-humble-gazebo-ros2-control \
+    ros-humble-rosbridge-server \
+    ros-humble-imu-tools \
+    ros-humble-imu-filter-madgwick \
+    ros-humble-imu-complementary-filter \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    source /opt/ros/humble/setup.bash
+    && rm -rf /var/lib/apt/lists/* 
+
+WORKDIR /ros2_ws
+COPY ./src ./src
+RUN . /opt/ros/humble/setup.sh && colcon build
+
+ENV ROS_DISTRO=humble
+ENV ROS_DOMAIN_ID=0
+SHELL ["/bin/bash", "-c"]
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+COPY config/ ./config/
+COPY launch/ ./launch/
+
+
+ENTRYPOINT source /opt/ros/$ROS_DISTRO/setup.bash && \
+           source install/setup.bash && \
+           ros2 launch robot_bringup robot_full.launch.py

@@ -20,22 +20,24 @@ RUN apt-get update && apt-get install -y \
     ros-humble-imu-tools \
     ros-humble-imu-filter-madgwick \
     ros-humble-imu-complementary-filter \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* 
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ros2_ws/src
+RUN git clone https://github.com/ros-drivers/rosserial.git
 
 WORKDIR /ros2_ws
-COPY ./src ./src
-RUN . /opt/ros/humble/setup.sh && colcon build
+RUN . /opt/ros/humble/setup.sh && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -r -y && \
+    colcon build --symlink-install
 
-ENV ROS_DISTRO=humble
-ENV ROS_DOMAIN_ID=0
-SHELL ["/bin/bash", "-c"]
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
-
-COPY config/ ./config/
 COPY launch/ ./launch/
+COPY webpage/ ./webpage/
+COPY config/ ./config/
+COPY ArduinoMC/ ./ArduinoMC/
+
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
+    echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
 
 
-ENTRYPOINT source /opt/ros/$ROS_DISTRO/setup.bash && \
-           source install/setup.bash && \
-           ros2 launch robot_bringup robot_full.launch.py

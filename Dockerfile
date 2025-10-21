@@ -1,7 +1,7 @@
 FROM ros:humble-ros-base
 
+# Install ROS 2 packages + pip + dependencies
 RUN apt-get update && apt-get install -y \
-    git \
     python3-pip \
     python3-colcon-common-extensions \
     ros-humble-slam-toolbox \
@@ -20,24 +20,22 @@ RUN apt-get update && apt-get install -y \
     ros-humble-imu-tools \
     ros-humble-imu-filter-madgwick \
     ros-humble-imu-complementary-filter \
+    ros-humble-micro-ros-agent \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /ros2_ws/src
-RUN git clone https://github.com/ros-drivers/rosserial.git
+ RUN pip3 install -U micro_ros_setup
 
+# Set up workspace
 WORKDIR /ros2_ws
-RUN . /opt/ros/humble/setup.sh && \
-    rosdep update && \
-    rosdep install --from-paths src --ignore-src -r -y && \
-    colcon build --symlink-install
 
+# Copy your project files
 COPY launch/ ./launch/
 COPY webpage/ ./webpage/
 COPY config/ ./config/
 COPY ArduinoMC/ ./ArduinoMC/
 
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
+# Setup ROS environment in bash
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
-
+CMD ["/bin/bash"]

@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1.4
-
 FROM ros:humble-ros-base
 
-# Install required ROS 2 and system packages
+# Install ROS 2 packages and dependencies
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-colcon-common-extensions \
@@ -22,29 +21,37 @@ RUN apt-get update && apt-get install -y \
     ros-humble-imu-tools \
     ros-humble-imu-filter-madgwick \
     ros-humble-imu-complementary-filter \
-    git wget build-essential cmake \
-    libasio-dev libtinyxml2-dev \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-fastrtps \
+    build-essential \
+    cmake \
+    git \
+    wget \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/*
 
+ENV ROS_DISTRO=humble
 
- WORKDIR /opt
-RUN git clone https://github.com/eProsima/Fast-CDR.git && \
-    cd Fast-CDR && mkdir build && cd build && \
-    cmake .. && make -j$(nproc) && make install
-
-    RUN git clone https://github.com/eProsima/Fast-DDS.git && \
-    cd Fast-DDS && git checkout v3.0.1 && mkdir build && cd build && \
-    cmake .. -DTHIRDPARTY=ON && \
-    make -j$(nproc) && make install
-    # Setup environment for Fast DDS
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-
-# Build micro-ROS Agent
-WORKDIR /microros_ws/src
-RUN git clone https://github.com/micro-ROS/micro-ROS-Agent.git
+# Create and setup the micro-ROS workspace
+RUN mkdir -p /microros_ws/src
 WORKDIR /microros_ws
-RUN . /opt/ros/humble/setup.sh && colcon build
+# Source ROS 2 installation
+SHELL ["/bin/bash", "-c"]
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
+# Clone the micro-ROS setup tools
+RUN git clone -b $ROS_DISTRO https://github.com/micro-ROS/micro_ros_setup.git src/micro_ros_setup
+# Install dependencies
+RUN apt-get update && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -y
+
+# Build micro-ROS tools
+RUN . /opt/ros/$ROS_DISTRO/setup.sh && colcon build
+
+# Source the installed micro-ROS tools
+RUN echo "source /microros_ws/install/local_setup.bash" >> ~/.bashrc
+
+COPY esp32/ ./firmware/freertos_apps/apps/esp32/
 
 # Set up workspace
 WORKDIR /ros2_ws
@@ -52,9 +59,8 @@ WORKDIR /ros2_ws
 # Copy your project files
 COPY src/ ./src/
 
+WORKDIR /
+RUN echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
+RUN echo 'source /microros_ws/install/setup.bash' >> ~/.bashrc
 
-# Setup ROS environment in bash
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
-RUN echo "source /microros_ws/install/local_setup.bash" >> ~/.bashrc
-
-CMD ["/bin/bash"]
+CMD ["bash"]

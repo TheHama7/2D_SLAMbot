@@ -1,17 +1,17 @@
-to add GUI to docker
+#to add GUI to docker
 xhost +local:root
 
-start docker
+#start docker
 docker compose up
 
-to run the docker
+#to run the docker
 sudo docker exec -it ros_slam_toolbox bash
 
-down docker
+#down docker
 docker compose down
 
 
-build docker for multi-arch (will work on different chip structures)
+#build docker for multi-arch (will work on different chip structures)
 
 docker run --privileged --rm tonistiigi/binfmt --install all
 docker buildx create --use
@@ -19,4 +19,51 @@ docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t registry.gitlab.com/araoof01/thesis:latest \
   --push .
+
+#You can pull the image using:
+
+docker pull registry.gitlab.com/araoof01/thesis:latest
+
+
+#To expose ports (e.g. for ROS 2 communication or a web server/joystick interface), you can add -p flags:
+
+docker run -it --rm \
+  -p 8888:8888 \  # example port mapping
+  registry.gitlab.com/araoof01/thesis:latest
+
+#To run with access to serial devices (e.g. USB-LiDAR or microcontroller like ESP32):
+  docker run -it --rm \
+    --device=/dev/ttyUSB0 \
+    registry.gitlab.com/araoof01/thesis:latest
+
+Example for Jetson Nano with ROS 2 + micro-ROS Agent
+docker run -it --rm \
+  --net=host \
+  --device=/dev/ttyUSB0 \
+  registry.gitlab.com/araoof01/thesis:latest \
+  bash -c "source /microros_ws/install/local_setup.bash && ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888"
+
+
+once docker starts, run this to setup micro ros
+ros2 run micro_ros_setup create_firmware_ws.sh freertos esp32
+
+# Configure step with ping_pong app and serial transport, change for own app
+ros2 run micro_ros_setup configure_firmware.sh ping_pong --transport serial
+
+# Build step
+ros2 run micro_ros_setup build_firmware.sh
+
+# Flash step
+ros2 run micro_ros_setup flash_firmware.sh
+
+# Download micro-ROS-Agent packages
+ros2 run micro_ros_setup create_agent_ws.sh
+
+# Build step
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.bash
+
+# Run a micro-ROS agent
+ros2 run micro_ros_agent micro_ros_agent serial --dev [device]
+TIP: you can use this command to find your serial device name: ls /dev/serial/by-id/*
 

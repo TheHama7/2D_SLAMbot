@@ -32,11 +32,13 @@ RUN apt-get update && apt-get install -y \
 
 ENV ROS_DISTRO=humble
 
-# Create and setup the micro-ROS workspace
-RUN mkdir -p /microros_ws/src
-WORKDIR /microros_ws
+
 # Source ROS 2 installation
 SHELL ["/bin/bash", "-c"]
+# Create and setup the micro-ROS workspace
+RUN mkdir -p /microros_ws/src
+WORKDIR /microros_ws/apps
+
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 # Clone the micro-ROS setup tools
 RUN git clone -b $ROS_DISTRO https://github.com/micro-ROS/micro_ros_setup.git src/micro_ros_setup
@@ -46,12 +48,13 @@ RUN apt-get update && \
     rosdep install --from-paths src --ignore-src -y
 
 # Build micro-ROS tools
-RUN . /opt/ros/$ROS_DISTRO/setup.sh && colcon build
+RUN source /opt/ros/$ROS_DISTRO/setup.sh && colcon build
 
 # Source the installed micro-ROS tools
 RUN echo "source /microros_ws/install/local_setup.bash" >> ~/.bashrc
 
-COPY esp32/ ./firmware/freertos_apps/apps/esp32/
+# copy esp32 app
+COPY esp32/ /microros_ws/apps/esp32/
 
 # Set up workspace
 WORKDIR /ros2_ws

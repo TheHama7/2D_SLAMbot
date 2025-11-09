@@ -85,6 +85,14 @@ WORKDIR /ros2_ws
 
 # Copy your project files
 COPY src/ ./src/
+# Install deps
+RUN apt-get update && rosdep install --from-paths src --ignore-src -r -y
+
+# Build the workspace
+RUN . /opt/ros/humble/setup.sh && colcon build --symlink-install
+
+# Auto-source workspace for container sessions
+RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
 
 WORKDIR /
 RUN echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc

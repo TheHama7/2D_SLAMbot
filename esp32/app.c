@@ -2,38 +2,68 @@
 #include "freertos/task.h"
 #include "driver/mcpwm.h"
 #include "driver/gpio.h"
-#include "driver/uart.h"
-#include "qmi8658.h"
-#include "ak09918.h"
+#include "esp_timer.h"
+#include <math.h>
+
+#include "IMU.h"   // Waveshare IMU wrapper
 
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <geometry_msgs/msg/twist.h>
 #include <sensor_msgs/msg/imu.h>
-#include <sensor_msgs/msg/magnetic_field.h>
+#include <std_msgs/msg/float32_multi_array.h>
 
-#define UART_PORT UART_NUM_1
-#define UART_TX GPIO_NUM_17
-#define UART_RX GPIO_NUM_16
-#define UART_BAUD 115200
+// ===== MOTOR PWM PINS =====
+#define M1_IN1  GPIO_NUM_25
+#define M1_IN2  GPIO_NUM_26
+#define M2_IN1  GPIO_NUM_27
+#define M2_IN2  GPIO_NUM_14
+#define PWM_FREQ 20000
 
-// Motor pins from Waveshare schematic
-#define M1_IN1  GPIO_NUM_23
-#define M1_IN2  GPIO_NUM_22
-#define M2_IN1  GPIO_NUM_19
-#define M2_IN2  GPIO_NUM_18
-#define M_PWM_FREQ 20000
+// ===== ENCODER PINS =====
+#define AENCA GPIO_NUM_35
+#define AENCB GPIO_NUM_34
+#define BENCA GPIO_NUM_27
+#define BENCB GPIO_NUM_16
 
+volatile long A_pulse = 0;
+volatile long B_pulse = 0;
+
+// Encoder parameters
+double reduction_ratio = 42;
+int ppr_num = 11;
+double shaft_ppr = 42 * 11;
+int interval = 100;
+
+// ===== micro-ROS objects =====
 static rcl_publisher_t imu_pub;
-static rcl_publisher_t mag_pub;
-static rcl_subscription_t sub_cmd;
-geometry_msgs__msg__Twist cmd_msg;
+static rcl_publisher_t rpm_pub;
+static rcl_subscription_t cmd_sub;
 
 sensor_msgs__msg__Imu imu_msg;
-sensor_msgs__msg__MagneticField mag_msg;
+std_msgs__msg__Float32MultiArray rpm_msg;
+geometry_msgs__msg__Twist cmd_msg;
 
-void init_motors()
+// ===== ENCODER ISR =====
+static void IRAM_ATTR A_wheel_pulse(void* arg)
+{
+    if (gpio_get_level(AENCA))
+        A_pulse++;
+    else
+        A_pulse--;
+}
+
+static void IRAM_ATTR B_wheel_pulse(void* arg)
+{
+    if (gpio_get_level(BENCA))
+        B_pulse++;
+    else
+        B_pulse--;
+}
+
+// ===== MOTOR PWM =====
+void pwm_init()
 {
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, M1_IN1);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0B, M1_IN2);
@@ -41,147 +71,156 @@ void init_motors()
     mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM1B, M2_IN2);
 
     mcpwm_config_t cfg = {
-        .frequency = M_PWM_FREQ,
+        .frequency = PWM_FREQ,
         .cmpr_a = 0,
         .cmpr_b = 0,
         .counter_mode = MCPWM_UP_COUNTER,
-        .duty_mode = MCPWM_DUTY_MODE_0,
+        .duty_mode = MCPWM_DUTY_MODE_0
     };
 
     mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &cfg);
     mcpwm_init(MCPWM_UNIT_1, MCPWM_TIMER_1, &cfg);
 }
 
-void set_motor_pwm(float left_speed, float right_speed)
+void set_motor(float left, float right)
 {
-    // Accepts values -1.0 to 1.0
-    float dutyL = fabs(left_speed) * 100;
-    float dutyR = fabs(right_speed) * 100;
+    float L = fminf(fmaxf(fabsf(left) * 100.0f, 0), 100);
+    float R = fminf(fmaxf(fabsf(right) * 100.0f, 0), 100);
 
-    if (left_speed >= 0) {
-        mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, dutyL);
-        mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, 0);
-    } else {
-        mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, 0);
-        mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, dutyL);
-    }
+    // Left motor
+    mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0,
+                   (left >= 0) ? MCPWM_OPR_A : MCPWM_OPR_B, L);
+    mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0,
+                   (left >= 0) ? MCPWM_OPR_B : MCPWM_OPR_A, 0);
 
-    if (right_speed >= 0) {
-        mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1, MCPWM_OPR_A, dutyR);
-        mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1, MCPWM_OPR_B, 0);
-    } else {
-        mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1, MCPWM_OPR_A, 0);
-        mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1, MCPWM_OPR_B, dutyR);
+    // Right motor
+    mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1,
+                   (right >= 0) ? MCPWM_OPR_A : MCPWM_OPR_B, R);
+    mcpwm_set_duty(MCPWM_UNIT_1, MCPWM_TIMER_1,
+                   (right >= 0) ? MCPWM_OPR_B : MCPWM_OPR_A, 0);
+}
+
+// ===== /cmd_vel CALLBACK =====
+void cmd_callback(const void *msg_in)
+{
+    const geometry_msgs__msg__Twist *cmd = (const geometry_msgs__msg__Twist *)msg_in;
+    float v = cmd->linear.x;
+    float w = cmd->angular.z;
+    float L = 0.20;
+
+    float left  = v - (w * L * 0.5f);
+    float right = v + (w * L * 0.5f);
+
+    left = fminf(fmaxf(left, -1), 1);
+    right = fminf(fmaxf(right, -1), 1);
+
+    set_motor(left, right);
+}
+
+// ===== RPM TASK =====
+void rpm_task(void *arg)
+{
+    rpm_msg.data.capacity = 2;
+    rpm_msg.data.size = 2;
+    rpm_msg.data.data = malloc(2 * sizeof(float));
+
+    while (1)
+    {
+        float rpm_A = ((float)A_pulse / shaft_ppr) * 60 * (1000 / interval);
+        float rpm_B = ((float)B_pulse / shaft_ppr) * 60 * (1000 / interval);
+
+        A_pulse = 0;
+        B_pulse = 0;
+
+        rpm_msg.data.data[0] = rpm_A;
+        rpm_msg.data.data[1] = rpm_B;
+
+        rcl_publish(&rpm_pub, &rpm_msg, NULL);
+        vTaskDelay(pdMS_TO_TICKS(interval));
     }
 }
 
-void cmd_callback(const void * msg_in)
+// ===== IMU TASK =====
+void imu_task(void *arg)
 {
-    const geometry_msgs__msg__Twist * cmd = (const geometry_msgs__msg__Twist *)msg_in;
-
-    // convert linear.x and angular.z into wheel speeds
-    float v = cmd->linear.x;      // forward m/s
-    float w = cmd->angular.z;     // rotation rad/s
-
-    float wheel_base = 0.20; // adjust for robot wheel spacing
-
-    float left = v - (w * wheel_base / 2);
-    float right = v + (w * wheel_base / 2);
-
-    // scale to [-1,1]
-    left = fmaxf(fminf(left,1.0), -1.0);
-    right = fmaxf(fminf(right,1.0), -1.0);
-
-    set_motor_pwm(left, right);
-}
-
-static void imu_task(void * arg)
-{
-    qmi8658_data_t accel, gyro;
-    ak09918_data_t mag;
+    EulerAngles angles;
+    IMU_ST_SENSOR_DATA_FLOAT gyro, accel;
+    IMU_ST_SENSOR_DATA magn;
 
     while(1)
     {
-        QMI8658_read_accel(&accel);
-        QMI8658_read_gyro(&gyro);
-        AK09918_read(&mag);
+        imuDataGet(&angles, &gyro, &accel, &magn);
 
-        imu_msg.linear_acceleration.x = accel.x;
-        imu_msg.linear_acceleration.y = accel.y;
-        imu_msg.linear_acceleration.z = accel.z;
+        imu_msg.linear_acceleration.x = accel.X;
+        imu_msg.linear_acceleration.y = accel.Y;
+        imu_msg.linear_acceleration.z = accel.Z;
 
-        imu_msg.angular_velocity.x = gyro.x;
-        imu_msg.angular_velocity.y = gyro.y;
-        imu_msg.angular_velocity.z = gyro.z;
+        imu_msg.angular_velocity.x = gyro.X;
+        imu_msg.angular_velocity.y = gyro.Y;
+        imu_msg.angular_velocity.z = gyro.Z;
 
         rcl_publish(&imu_pub, &imu_msg, NULL);
-
-        mag_msg.magnetic_field.x = mag.x;
-        mag_msg.magnetic_field.y = mag.y;
-        mag_msg.magnetic_field.z = mag.z;
-
-        rcl_publish(&mag_pub, &mag_msg, NULL);
-
-        vTaskDelay(20 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
-extern "C" void app_main(void)
+// ===== MAIN =====
+void app_main(void)
 {
-    uart_config_t cfg = {
-        .baud_rate = UART_BAUD,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+    // ===== GPIO CONFIG FOR ENCODERS =====
+    gpio_config_t io_conf = {
+        .intr_type = GPIO_INTR_DISABLE,
+        .mode = GPIO_MODE_INPUT,
+        .pin_bit_mask = (1ULL<<AENCA) | (1ULL<<AENCB) | (1ULL<<BENCA) | (1ULL<<BENCB),
+        .pull_up_en = GPIO_PULLUP_ENABLE
     };
+    gpio_config(&io_conf);
 
-    uart_param_config(UART_PORT, &cfg);
-    uart_set_pin(UART_PORT, UART_TX, UART_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    uart_driver_install(UART_PORT, 2048, 0, 0, NULL, 0);
+    // ISR service
+    gpio_install_isr_service(0);
+    gpio_set_intr_type(AENCB, GPIO_INTR_POSEDGE);
+    gpio_isr_handler_add(AENCB, A_wheel_pulse, NULL);
 
-    init_motors();
-    QMI8658_init();
-    AK09918_init();
+    gpio_set_intr_type(BENCB, GPIO_INTR_POSEDGE);
+    gpio_isr_handler_add(BENCB, B_wheel_pulse, NULL);
 
-    static rcl_allocator_t allocator = rcl_get_default_allocator();
-    static rclc_support_t support;
+    // Init motor + IMU
+    pwm_init();
+    imuInit();
 
+    // ===== micro-ROS Setup =====
+    rcl_allocator_t allocator = rcl_get_default_allocator();
+    rclc_support_t support;
     rclc_support_init(&support, 0, NULL, &allocator);
 
     rcl_node_t node;
     rclc_node_init_default(&node, "esp32_robot", "", &support);
 
-    rclc_publisher_init_default(
-        &imu_pub,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-        "imu/data"
-    );
+    rclc_publisher_init_default(&imu_pub, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), "imu/data");
 
-    rclc_publisher_init_default(
-        &mag_pub,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, MagneticField),
-        "imu/mag"
-    );
+    rclc_publisher_init_default(&rpm_pub, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "wheel/rpm");
 
-    rclc_subscription_init_default(
-        &sub_cmd,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "cmd_vel"
-    );
+    rclc_subscription_init_default(&cmd_sub, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel");
 
     rclc_executor_t executor;
     rclc_executor_init(&executor, &support.context, 1, &allocator);
-    rclc_executor_add_subscription(&executor, &sub_cmd, &cmd_msg, &cmd_callback, ON_NEW_DATA);
+    rclc_executor_add_subscription(&executor, &cmd_sub, &cmd_msg, cmd_callback, ON_NEW_DATA);
 
+    // Tasks
+    xTaskCreate(rpm_task, "rpm_task", 4096, NULL, 5, NULL);
     xTaskCreate(imu_task, "imu_task", 4096, NULL, 5, NULL);
 
     while(1)
     {
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
+}
+void appMain(void *arg)
+{
+    // ESP-IDF calls this in some templates — redirect to app_main()
+    app_main();
 }

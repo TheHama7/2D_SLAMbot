@@ -1,5 +1,3 @@
-
-
 services:
   slam_toolbox:
     build:
@@ -8,15 +6,24 @@ services:
     container_name: ros_slam_toolbox
     stdin_open: true
     tty: true
-    privileged: true  # Required to access /dev/*
+    privileged: true
     environment:
       - ROS_DISTRO=humble
       - DISPLAY=${DISPLAY}
     volumes:
-      - ./:/root/ws  # Mounts current directory as workspace
+      - ./src:/ros2_ws/src
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     devices:
-      - /dev:/dev    # Shares all host devices
-    command: bash    # Keeps the container running interactively
-
- 
+      - /dev:/dev
+    command: bash
+  micro_ros_agent:
+    container_name: micro_ros_agent
+    image: registry.gitlab.com/araoof01/thesis:latest  # or a specific agent image
+    command: >
+      bash -c "
+      source /opt/ros/$ROS_DISTRO/setup.bash &&
+      ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
+      "
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    privileged: true

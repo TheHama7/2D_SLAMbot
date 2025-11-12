@@ -16,14 +16,4 @@ services:
     devices:
       - /dev:/dev
     command: bash
-  micro_ros_agent:
-    container_name: micro_ros_agent
-    image: registry.gitlab.com/araoof01/thesis:latest  # or a specific agent image
-    command: >
-      bash -c "
-      source /opt/ros/$ROS_DISTRO/setup.bash &&
-      ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0
-      "
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
-    privileged: true
+  

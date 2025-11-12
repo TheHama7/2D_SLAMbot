@@ -1,0 +1,4 @@
+[0.000000] (-) TimerEvent: {}
+[0.000348] (-) JobUnselected: {'identifier': 'esp32_bridge'}
+[0.000393] (-) JobUnselected: {'identifier': 'fake_data_pkg'}
+[0.000421] (-) EventReactorShutdown: {}

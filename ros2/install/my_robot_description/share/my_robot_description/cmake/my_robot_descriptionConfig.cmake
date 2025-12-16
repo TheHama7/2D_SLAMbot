@@ -1,0 +1,1 @@
+/home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/my_robot_description/ament_cmake_core/my_robot_descriptionConfig.cmake

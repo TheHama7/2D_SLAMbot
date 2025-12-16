@@ -41,11 +41,31 @@ class ESP32Odom(Node):
         self.timer = self.create_timer(0.01, self.step) 
 
         # Covariances (used for EKF, kept as-is)
-        self.imu_lin_acc_cov = [0.05,0,0, 0,0.05,0, 0,0,0.05]
-        self.imu_ang_vel_cov = [0.02,0,0, 0,0.02,0, 0,0,0.02]
-        self.odom_pose_cov = [1e-3,0,0, 0,1e-3,0, 0,0,1e-2]
-        self.odom_twist_cov = [1e-3,0,0, 0,1e-3,0, 0,0,1e-2]
+        self.imu_lin_acc_cov = [0.05,0.0,0.0, 0.0,0.05,0.0, 0.0,0.0,0.05]
+        self.imu_ang_vel_cov = [0.02,0.0,0.0, 0.0,0.02,0.0, 0.0,0.0,0.02]
+        self.odom_pose_cov = [
+            # X, Y, Z (m)
+            1e-3, 0.0, 0.0, 0.0, 0.0, 0.0,     # Row 1 (X: 1e-3)
+            0.0, 1e-3, 0.0, 0.0, 0.0, 0.0,     # Row 2 (Y: 1e-3)
+            0.0, 0.0, 1e12, 0.0, 0.0, 0.0,    # Row 3 (Z: Set high/unobserved)
+    
+            # Roll, Pitch, Yaw (rad)
+            0.0, 0.0, 0.0, 1e12, 0.0, 0.0,    # Row 4 (Roll: Set high/unobserved)
+            0.0, 0.0, 0.0, 0.0, 1e12, 0.0,    # Row 5 (Pitch: Set high/unobserved)
+            0.0, 0.0, 0.0, 0.0, 0.0, 1e-2     # Row 6 (Yaw: 1e-2)
+        ]        
+        self.odom_twist_cov = [
+            # Vx, Vy, Vz (m/s)
+            1e-3, 0.0, 0.0, 0.0, 0.0, 0.0,     # Row 1 (Vx: 1e-3)
+            0.0, 1e-3, 0.0, 0.0, 0.0, 0.0,     # Row 2 (Vy: 1e-3)
+            0.0, 0.0, 1e12, 0.0, 0.0, 0.0,    # Row 3 (Vz: Set high/unobserved)
 
+            # R_rate, P_rate, Y_rate (rad/s)
+            0.0, 0.0, 0.0, 1e12, 0.0, 0.0,    # Row 4 (Roll rate: Set high/unobserved)
+            0.0, 0.0, 0.0, 0.0, 1e12, 0.0,    # Row 5 (Pitch rate: Set high/unobserved)
+            0.0, 0.0, 0.0, 0.0, 0.0, 1e-2     # Row 6 (Yaw rate: 1e-2)
+        ]
+        self.odom_twist_cov = self.odom_twist_cov + [0.0] * (36 - len(self.odom_twist_cov))
         self.get_logger().info("ESP32 odom bridge started.")
 
     def step(self):
@@ -131,10 +151,10 @@ class ESP32Odom(Node):
         od.pose.pose.position.x = self.x
         od.pose.pose.position.y = self.y
         od.pose.pose.orientation = yaw_to_quat(self.yaw)
-        od.pose.covariance = self.odom_pose_cov + [0.0]*(36 - 6) # Use defined covariance
+        od.pose.covariance = self.odom_pose_cov # Use defined covariance
         od.twist.twist.linear.x = v
         od.twist.twist.angular.z = w
-        od.twist.covariance = self.odom_twist_cov + [0.0]*(36 - 6) # Use defined covariance
+        od.twist.covariance = self.odom_twist_cov  # Use defined covariance
         self.odom_pub.publish(od)
 
 def main():

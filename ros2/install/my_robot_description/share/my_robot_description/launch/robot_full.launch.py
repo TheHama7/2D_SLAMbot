@@ -1,0 +1,1 @@
+/home/hama/ros2_ws/thesisFolder/Thesis/ros2/src/my_robot_description/launch/robot_full.launch.py

@@ -1,0 +1,49 @@
+slam_toolbox:
+  ros__parameters:
+    # --- Basic Setup ---
+    # The topic where the LiDAR scan data is received.
+    scan_topic: /scan 
+    
+    # The frame that represents the global map. SLAM publishes the map->odom transform.
+    map_frame: map
+    
+    # The frame that defines the robot's local odometry.
+    # We must use the EKF's output (odom) for improved drift-correction.
+    odom_frame: odom
+    
+    # The frame attached to the robot's base.
+    base_frame: base_link
+
+    # --- Sensor Inputs ---
+    # Whether to use the odometry input provided by the /odom frame.
+    use_pose_of_robot: true # True, as we are fusing Odom/IMU into the /odom frame
+
+    # Whether to use the /imu/data topic for orientation hints (recommended)
+    use_imu_orientation: false # Set to true ONLY if IMU is very stable. Usually false for 2D.
+    
+    # --- Map Settings ---
+    resolution: 0.05 # Map resolution in meters/cell (5cm is standard)
+    
+    # --- Optimization Settings (Key for Performance) ---
+    # Use ASYNC to run mapping in a separate thread, improving real-time performance.
+    mode: async
+    
+    # Maximum distance for scan matching (how far apart two scans can be)
+    max_icp_iterations: 30
+    
+    # Whether to enable loop closure (fixes map drift when revisiting areas)
+    enable_loop_closure: true 
+
+    # Maximum distance the robot must travel before performing scan matching
+    scan_buffer_size: 250
+    
+    # Maximum acceptable covariance (positional error) for an odom frame to be accepted.
+    # Set this lower if your EKF covariance is good.
+    maximum_odometry_covariance: 0.002
+    
+    # --- Visualization/Publishing ---
+    publish_tf: true # SLAM publishes map -> odom transform
+    pub_sub_with_namespace: true
+    
+    # Publish map update rate (Hz)
+    map_update_interval: 5.0

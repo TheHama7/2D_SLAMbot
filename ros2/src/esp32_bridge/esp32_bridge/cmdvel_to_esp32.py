@@ -38,7 +38,7 @@ class CmdVelToESP32(Node):
         # Setup ROS 2 Subscription and Watchdog Timer
         self.sub = self.create_subscription(Twist, "/cmd_vel", self.cb, 10)
         self.last_cmd = time.monotonic()
-        self.timer = self.create_timer(0.05, self.watchdog)
+        self.timer = self.create_timer(0.5, self.watchdog)
 
         self.get_logger().info("CmdVel→ESP32 bridge started. Listening on /cmd_vel.")
 
@@ -76,7 +76,7 @@ class CmdVelToESP32(Node):
         rpmB = max(-max_rpm, min(max_rpm, rpmB))
 
         # Format command string exactly as expected by the ESP32: "MOTOR,A_RPM,B_RPM\n"
-        cmd = f"MOTOR,{rpmA:.1f},{rpmB:.1f}\n"
+        cmd = f"{rpmA:.1f},{rpmB:.1f}\n"
         
         try:
             self.ser.write(cmd.encode())
@@ -95,7 +95,7 @@ class CmdVelToESP32(Node):
             self.get_logger().warn("Watchdog timeout: Sending stop command (MOTOR,0,0).")
             try:
                 # Send the exact stop command the ESP32 expects
-                self.ser.write(b"MOTOR,0,0\n")
+                self.ser.write(b"0,0\n")
             except Exception:
                 pass
             # Update last_cmd to prevent continuous warnings if the serial connection is still open but unresponsive

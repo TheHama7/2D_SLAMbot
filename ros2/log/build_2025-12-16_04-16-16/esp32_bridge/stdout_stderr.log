@@ -1,0 +1,25 @@
+/usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+  warnings.warn(
+running develop
+running egg_info
+creating esp32_bridge.egg-info
+writing esp32_bridge.egg-info/PKG-INFO
+writing dependency_links to esp32_bridge.egg-info/dependency_links.txt
+writing entry points to esp32_bridge.egg-info/entry_points.txt
+writing requirements to esp32_bridge.egg-info/requires.txt
+writing top-level names to esp32_bridge.egg-info/top_level.txt
+writing manifest file 'esp32_bridge.egg-info/SOURCES.txt'
+reading manifest file 'esp32_bridge.egg-info/SOURCES.txt'
+writing manifest file 'esp32_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages/esp32-bridge.egg-link (link to .)
+Installing cmdvel_to_esp32 script to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/esp32_bridge
+Installing esp32_odom_node script to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/esp32_bridge
+
+Installed /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge
+running symlink_data
+creating /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/share/ament_index
+creating /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/share/ament_index/resource_index
+creating /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/resource/esp32_bridge -> /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/package.xml -> /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/share/esp32_bridge

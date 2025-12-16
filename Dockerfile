@@ -1,7 +1,8 @@
+
 FROM ros:humble-ros-base
 
+# Install ROS 2 packages and dependencies
 RUN apt-get update && apt-get install -y \
-    git \
     python3-pip \
     python3-colcon-common-extensions \
     ros-humble-slam-toolbox \
@@ -20,24 +21,40 @@ RUN apt-get update && apt-get install -y \
     ros-humble-imu-tools \
     ros-humble-imu-filter-madgwick \
     ros-humble-imu-complementary-filter \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-fastrtps \
+    libfastcdr-dev\
+    rsync\
+    build-essential \
+    cmake \
+    git \
+    wget \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/*\
+&& ln -s /usr/bin/python3 /usr/bin/python \
+&& pip3 install pyserial
+ENV ROS_DISTRO=humble
 
-WORKDIR /ros2_ws/src
-RUN git clone https://github.com/ros-drivers/rosserial.git
+RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+# Source ROS 2 installation
+SHELL ["/bin/bash", "-c"]
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
+
+# Copy ESP32 app to a temporary holding location
+RUN mkdir -p esp32/
+WORKDIR /esp32
+COPY esp32/ ./esp32/
+# Set up workspace
 WORKDIR /ros2_ws
-RUN . /opt/ros/humble/setup.sh && \
-    rosdep update && \
-    rosdep install --from-paths src --ignore-src -r -y && \
-    colcon build --symlink-install
 
-COPY launch/ ./launch/
-COPY webpage/ ./webpage/
-COPY config/ ./config/
-COPY ArduinoMC/ ./ArduinoMC/
-
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
+# Copy your project files
+COPY src/ ./src/
 
 
+# Auto-source workspace for container sessions
+RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
+
+
+
+CMD ["bash"]

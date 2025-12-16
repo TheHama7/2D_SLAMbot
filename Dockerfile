@@ -41,20 +41,13 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 SHELL ["/bin/bash", "-c"]
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 
-# Copy ESP32 app to a temporary holding location
-RUN mkdir -p esp32/
-WORKDIR /esp32
-COPY esp32/ ./esp32/
 # Set up workspace
 WORKDIR /ros2_ws
 
 # Copy your project files
 COPY src/ ./src/
 
-
 # Auto-source workspace for container sessions
 RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
-
-
 
 CMD ["bash"]

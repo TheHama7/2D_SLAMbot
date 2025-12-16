@@ -1,2 +1,0 @@
-Invoking command in '/root/ros2_ws/build/fake_data_pkg': /usr/bin/cmake /root/ros2_ws/fake_data_pkg -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/fake_data_pkg
-Invoked command in '/root/ros2_ws/build/fake_data_pkg' returned '1': /usr/bin/cmake /root/ros2_ws/fake_data_pkg -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/fake_data_pkg

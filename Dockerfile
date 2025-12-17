@@ -1,53 +1,50 @@
-
 FROM ros:humble-ros-base
 
-# Install ROS 2 packages and dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+
+# -----------------------------
+# System & ROS dependencies
+# -----------------------------
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-colcon-common-extensions \
     ros-humble-slam-toolbox \
     ros-humble-rplidar-ros \
-    ros-humble-nav2-bringup \
     ros-humble-robot-localization \
-    ros-humble-rviz2 \
+    ros-humble-robot-state-publisher \
     ros-humble-tf2-tools \
     ros-humble-xacro \
-    ros-humble-ros2-control \
-    ros-humble-ros2-controllers \
-    ros-humble-diagnostics \
-    ros-humble-joint-state-publisher \
-    ros-humble-robot-state-publisher \
-    ros-humble-rosbridge-server \
-    ros-humble-imu-tools \
-    ros-humble-imu-filter-madgwick \
-    ros-humble-imu-complementary-filter \
-    ros-humble-rmw-fastrtps-cpp \
-    ros-humble-fastrtps \
-    libfastcdr-dev\
-    rsync\
     build-essential \
     cmake \
     git \
-    wget \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/*\
-&& ln -s /usr/bin/python3 /usr/bin/python \
-&& pip3 install pyserial
-ENV ROS_DISTRO=humble
+    udev \
+ && rm -rf /var/lib/apt/lists/*
 
+# Python deps
+RUN pip3 install --no-cache-dir pyserial
+
+# Make python -> python3
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-# Source ROS 2 installation
+# -----------------------------
+# ROS environment
+# -----------------------------
 SHELL ["/bin/bash", "-c"]
-RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
-# Set up workspace
+# -----------------------------
+# Workspace
+# -----------------------------
 WORKDIR /ros2_ws
 
-# Copy your project files
-COPY src/ ./src/
+COPY src/ src/
 
-# Auto-source workspace for container sessions
-RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
+# Build workspace
+RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
+    colcon build --symlink-install
+
+# Source workspace on startup
+RUN echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
 
 CMD ["bash"]

@@ -1,1 +1,103 @@
-/home/hama/ros2_ws/thesisFolder/Thesis/ros2/src/my_robot_description/urdf/robot.urdf.xacro
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="my_bot">
+
+  <xacro:property name="M_PI" value="3.1415926535897931" /> 
+  
+  <xacro:property name="base_radius" value="0.2"/>
+  <xacro:property name="wheel_radius" value="0.05"/>
+  <xacro:property name="wheel_width"  value="0.02"/>
+  <xacro:property name="wheel_sep"    value="0.35"/>
+  <xacro:property name="wheel_x_offset" value="-0.02"/>
+  <xacro:property name="wheel_y_offset" value="0.19"/>
+  <xacro:property name="caster_radius" value="0.045"/>
+  <xacro:property name="caster_x_offset" value="0.18"/>
+
+
+  <material name="blue">
+    <color rgba="0.0 0.3 0.8 1.0"/>
+  </material>
+  <xacro:macro name="inertial_box" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <origin xyz="0 0 0"/>
+      <inertia
+        ixx="${mass/12.0 * (y*y + z*z)}"
+        iyy="${mass/12.0 * (x*x + z*z)}"
+        izz="${mass/12.0 * (x*x + y*y)}"
+        ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <link name="base_link">
+    </link>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.15"/>
+  </joint>
+
+  <link name="laser">
+    </link>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/>
+    <origin xyz="0 0 0.18"/>
+  </joint>
+
+  <xacro:macro name="wheel" params="name y">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/> <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="dark"/>
+        </visual>
+      
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="0.5"/>
+        <origin xyz="0 0 0"/>
+        <inertia
+          ixx="1e-3" iyy="1e-3" izz="1e-3"
+          ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <joint name="${name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}"/>
+
+      <origin
+        xyz="${wheel_x_offset} ${y} ${wheel_radius}"
+        rpy="0 0 0"/>
+
+      <axis xyz="0 1 0"/>
+    </joint>
+    
+  </xacro:macro>
+
+  <xacro:wheel name="wheel_left_link"  y="${ wheel_y_offset }"/>
+  <xacro:wheel name="wheel_right_link" y="${-wheel_y_offset }"/>
+
+  <link name="caster_link">
+    </link>
+
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_link"/>
+    <origin
+      xyz="${caster_x_offset} 0 0"
+      rpy="0 0 0"/>
+  </joint>
+
+  </robot>

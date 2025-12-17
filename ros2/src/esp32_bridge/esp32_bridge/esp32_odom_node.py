@@ -12,6 +12,7 @@ def yaw_to_quat(yaw):
 
 class ESP32Odom(Node):
     def __init__(self):
+        
         super().__init__('esp32_odom')
         self.declare_parameter('port', '/dev/ttyUSB0')
         self.declare_parameter('baud', 115200)

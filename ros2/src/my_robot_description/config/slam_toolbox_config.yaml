@@ -47,3 +47,4 @@ slam_toolbox:
     
     # Publish map update rate (Hz)
     map_update_interval: 5.0
+  

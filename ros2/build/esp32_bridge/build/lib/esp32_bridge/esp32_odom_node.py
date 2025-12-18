@@ -14,7 +14,7 @@ class ESP32Odom(Node):
     def __init__(self):
         
         super().__init__('esp32_odom')
-        self.declare_parameter('port', '/dev/ttyUSB0')
+        self.declare_parameter('port', '/dev/esp32')
         self.declare_parameter('baud', 115200)
         
         # --- KINEMATIC PARAMETERS: UPDATED TO MATCH ESP32 (85mm dia, 150mm track) ---

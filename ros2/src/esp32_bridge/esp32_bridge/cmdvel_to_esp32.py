@@ -18,7 +18,7 @@ class CmdVelToESP32(Node):
         self.declare_parameter('wheel_base', 0.15)     # m (150 mm)
         
         # --- Communication and Safety Parameters ---
-        self.declare_parameter('port', '/dev/ttyUSB0')
+        self.declare_parameter('port', '/dev/esp32')
         self.declare_parameter('baud', 115200)
         self.declare_parameter('max_rpm', 250.0)       # Max saturation value for RPM
         self.declare_parameter('timeout', 0.5)         # seconds (Watchdog time)
@@ -80,7 +80,7 @@ class CmdVelToESP32(Node):
         
         try:
             self.ser.write(cmd.encode())
-            # self.get_logger().info(f"Sent: {cmd.strip()}") # Uncomment for debugging
+            self.get_logger().info(f"Sent: {cmd.strip()}") # Uncomment for debugging
         except Exception as e:
             self.get_logger().warn(f"Serial write failed: {e}")
 

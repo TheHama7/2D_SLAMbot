@@ -36,9 +36,10 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 # -----------------------------
 # Workspace
 # -----------------------------
+
 WORKDIR /ros2_ws
 
-COPY src/ src/
+COPY ros2/ ros2/
 
 # Build workspace
 RUN source /opt/ros/$ROS_DISTRO/setup.bash && \

@@ -1,5 +1,7 @@
 FROM ros:humble-ros-base
 
+RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=humble
 
@@ -39,7 +41,7 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 WORKDIR /ros2_ws
 
-COPY ros2/ ros2/
+COPY ros2/ .
 
 # Build workspace
 RUN source /opt/ros/$ROS_DISTRO/setup.bash && \

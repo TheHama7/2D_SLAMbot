@@ -16,7 +16,7 @@ class ESP32Bridge(Node):
         super().__init__('esp32_bridge')
 
         # ---------------- PARAMETERS ----------------
-        self.declare_parameter('port', '/dev/ttyUSB0')
+        self.declare_parameter('port', '/dev/esp32')
         self.declare_parameter('baud', 115200)
         self.declare_parameter('wheel_radius', 0.0425)
         self.declare_parameter('wheel_base', 0.15)
@@ -27,7 +27,12 @@ class ESP32Bridge(Node):
         baud = self.get_parameter('baud').value
 
         try:
-            self.ser = serial.Serial(port, baud, timeout=0.01)
+            self.ser = serial.Serial(
+                port,
+                baud,
+                timeout=0.01,
+                exclusive=True
+            )
             self.get_logger().info(f"Opened ESP32 serial on {port}")
         except serial.SerialException as e:
             self.get_logger().fatal(f"Serial open failed: {e}")
@@ -94,6 +99,9 @@ class ESP32Bridge(Node):
             line = self.ser.readline().decode(errors='ignore').strip()
         except Exception:
             return
+
+        if line:
+            self.get_logger().info(f"RAW: {line}")
 
         if not line.startswith("ODOM"):
             return

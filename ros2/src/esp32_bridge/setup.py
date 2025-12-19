@@ -21,6 +21,7 @@ setup(
         'console_scripts': [
             'cmdvel_to_esp32 = esp32_bridge.cmdvel_to_esp32:main',
             'esp32_odom_node = esp32_bridge.esp32_odom_node:main',
+            'esp32_bridge_node = esp32_bridge.esp32_bridge_node:main',
         ],
     },
 )

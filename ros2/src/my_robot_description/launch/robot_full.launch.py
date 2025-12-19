@@ -26,21 +26,8 @@ def generate_launch_description():
         output='screen'
     )
 
-    esp32_cmd = Node(
-        package='esp32_bridge',
-        executable='cmdvel_to_esp32',
-        name='cmdvel_sender',
-        output='screen',
-        parameters=[{'port': '/dev/esp32', 'baud': 115200}]
-    )
+   
 
-    esp32_odom = Node(
-        package='esp32_bridge',
-        executable='esp32_odom_node',
-        name='odom_receiver',
-        output='screen',
-        parameters=[{'port': '/dev/esp32', 'baud': 115200}]
-    )
 
     ekf_node = Node(
         package='robot_localization',
@@ -84,8 +71,32 @@ def generate_launch_description():
 
     return LaunchDescription([
         robot_state_pub,
-        esp32_cmd,
-        esp32_odom,
+        
+        Node(
+            package='esp32_bridge',
+            executable='cmdvel_to_esp32',
+            name='cmdvel_sender',
+            output='screen',
+            parameters=[{
+                'port': '/dev/esp32',
+                'baud': 115200
+            }]
+        ),
+
+        # -------------------------
+        # ESP32 → Odometry + IMU
+        # -------------------------
+        Node(
+            package='esp32_bridge',
+            executable='esp32_odom_node',
+            name='odom_receiver',
+            output='screen',
+            parameters=[{
+                'port': '/dev/esp32',
+                'baud': 115200
+            }]
+        ),
+
         ekf_node,
         rplidar_delayed,
         slam_delayed,

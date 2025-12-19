@@ -24,11 +24,10 @@ docker buildx build \
 
 docker pull registry.gitlab.com/araoof01/thesis:latest
 
-
 #To expose ports (e.g. for ROS 2 communication or a web server/joystick interface), you can add -p flags:
 
 docker run -it --rm \
-  -p 8888:8888 \  # example port mapping
+  -p 8888:8888 \  
   registry.gitlab.com/araoof01/thesis:latest
 
 #To run with access to serial devices (e.g. USB-LiDAR or microcontroller like ESP32):
@@ -41,31 +40,49 @@ docker run -it --rm \
   --net=host \
   --device=/dev/ttyUSB0 \
   registry.gitlab.com/araoof01/thesis:latest \
-  bash -c "source /microros_ws/install/local_setup.bash && ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888"
 
 
-once docker starts, run this to setup micro ros
-ros2 run micro_ros_setup create_firmware_ws.sh freertos esp32
+ROS_DOMAIN_ID=77   !!!!
 
-# Configure step with ping_pong app and serial transport, change for own app
-ros2 run micro_ros_setup configure_firmware.sh ping_pong --transport serial
 
-# Build step
-ros2 run micro_ros_setup build_firmware.sh
+export ROS_DOMAIN_ID=77
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
-# Flash step
-ros2 run micro_ros_setup flash_firmware.sh
 
-# Download micro-ROS-Agent packages
-ros2 run micro_ros_setup create_agent_ws.sh
+#Enable at boot 
+sudo systemctl enable robot.service
 
-# Build step
-ros2 run micro_ros_setup build_agent.sh
-source install/local_setup.bash
+#start now to test
 
-# Run a micro-ROS agent
-ros2 run micro_ros_agent micro_ros_agent serial --dev [device]
-TIP: you can use this command to find your serial device name: ls /dev/serial/by-id/*
+sudo systemctl start robot.service
 
-#or use script 
-build_and_flash.sh /dev/ttyUSB0
+#when i push new image
+sudo systemctl stop robot.service
+sudo docker pull registry.gitlab.com/araoof01/thesis:latest
+sudo systemctl start robot.service
+
+
+docker run -it --rm \
+--name robot_ros \
+--net=host \
+--ipc=host \
+--pid=host \
+--privileged \
+-e ROS_DOMAIN_ID=77 \
+-e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
+-v /dev:/dev \
+registry.gitlab.com/araoof01/thesis:latest 
+
+# create a docker builder that is reusable
+docker buildx create \
+  --name thesis-builder \
+  --driver docker-container \
+  --use
+
+  # use that builder and save the cache on gitlab
+  docker buildx build \
+  --platform linux/arm64 \
+  --cache-from=type=registry,ref=registry.gitlab.com/araoof01/thesis:buildcache \
+  --cache-to=type=registry,ref=registry.gitlab.com/araoof01/thesis:buildcache,mode=max \
+  -t registry.gitlab.com/araoof01/thesis:latest \
+  --push .

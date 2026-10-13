@@ -1,0 +1,35 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.2
+    two_d_mode: true
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # 15 State Variables (Pose: x, y, z | Roll, Pitch, Yaw) + (Twist: Vx, Vy, Vz | Vroll, Vpitch, Vyaw) + (Accel: Ax, Ay, Az)
+    
+    # Wheel Odometry: Use X, Y, Yaw (from Pose part) and Vx, Vz (from Twist part)
+    odom0: /wheel_odom
+    odom0_differential: false # false: Absolute position/angle; true: Only relative changes
+    odom0_config: [ true,  true,  false,  # Pose X, Y, Z
+                    false, false, true,   # Roll, Pitch, Yaw
+                    true,  true,  false,  # Twist Vx, Vy, Vz
+                    false, false, true,   # Twist Vroll, Vpitch, Vyaw (Twist Angular)
+                    false, false, false]  # Accel Ax, Ay, Az (Not provided by Odometry)
+
+    # IMU: Use Angular Velocity (Vz) and Linear Acceleration (Ax, Ay)
+    imu0: /imu/data
+    imu0_remove_gravitational_acceleration: true # Crucial for clean Ax, Ay
+    imu0_differential: false
+    imu0_relative: false
+    imu0_config: [ false, false, false,  # Pose X, Y, Z (No pose from raw IMU)
+                   false, false, false,  # Roll, Pitch, Yaw (Unless using full fusion)
+                   false, false, false,  # Twist Vx, Vy, Vz
+                   false, false, true,   # Twist Vroll, Vpitch, **Vyaw (Angular Velocity Z)**
+                   true,  true,  false ] # Accel **Ax, Ay**, Az (Linear Acceleration)
+
+    publish_tf: true
+    # ... (Keep other parameters as they were)

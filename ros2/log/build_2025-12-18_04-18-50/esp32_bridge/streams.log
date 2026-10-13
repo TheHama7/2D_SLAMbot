@@ -1,0 +1,28 @@
+[0.598s] Invoking command in '/home/hama/ros2_ws/thesisFolder/Thesis/ros2/src/esp32_bridge': PYTHONPATH=/home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/esp32_bridge build --build-base /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/build install --record /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/install.log --install-scripts $base/lib/esp32_bridge --single-version-externally-managed install_data
+[0.775s] /usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+[0.775s]   warnings.warn(
+[0.781s] running egg_info
+[0.782s] writing ../../build/esp32_bridge/esp32_bridge.egg-info/PKG-INFO
+[0.782s] writing dependency_links to ../../build/esp32_bridge/esp32_bridge.egg-info/dependency_links.txt
+[0.782s] writing entry points to ../../build/esp32_bridge/esp32_bridge.egg-info/entry_points.txt
+[0.782s] writing requirements to ../../build/esp32_bridge/esp32_bridge.egg-info/requires.txt
+[0.782s] writing top-level names to ../../build/esp32_bridge/esp32_bridge.egg-info/top_level.txt
+[0.784s] reading manifest file '../../build/esp32_bridge/esp32_bridge.egg-info/SOURCES.txt'
+[0.784s] writing manifest file '../../build/esp32_bridge/esp32_bridge.egg-info/SOURCES.txt'
+[0.784s] running build
+[0.784s] running build_py
+[0.785s] copying esp32_bridge/esp32_bridge_node.py -> /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/build/lib/esp32_bridge
+[0.785s] running install
+[0.785s] running install_lib
+[0.785s] copying /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/build/lib/esp32_bridge/esp32_bridge_node.py -> /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages/esp32_bridge
+[0.786s] byte-compiling /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages/esp32_bridge/esp32_bridge_node.py to esp32_bridge_node.cpython-310.pyc
+[0.787s] running install_data
+[0.787s] running install_egg_info
+[0.789s] removing '/home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages/esp32_bridge-0.1.0-py3.10.egg-info' (and everything under it)
+[0.789s] Copying ../../build/esp32_bridge/esp32_bridge.egg-info to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages/esp32_bridge-0.1.0-py3.10.egg-info
+[0.789s] running install_scripts
+[0.804s] Installing cmdvel_to_esp32 script to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/esp32_bridge
+[0.804s] Installing esp32_bridge_node script to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/esp32_bridge
+[0.804s] Installing esp32_odom_node script to /home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/esp32_bridge
+[0.804s] writing list of installed files to '/home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/install.log'
+[0.820s] Invoked command in '/home/hama/ros2_ws/thesisFolder/Thesis/ros2/src/esp32_bridge' returned '0': PYTHONPATH=/home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/hama/ros2_ws/thesisFolder/Thesis/ros2/install/esp32_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/esp32_bridge build --build-base /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/build install --record /home/hama/ros2_ws/thesisFolder/Thesis/ros2/build/esp32_bridge/install.log --install-scripts $base/lib/esp32_bridge --single-version-externally-managed install_data

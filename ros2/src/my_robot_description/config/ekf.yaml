@@ -1,0 +1,47 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.2
+    two_d_mode: true
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    publish_tf: true
+
+    # -------------------------
+    # WHEEL ODOMETRY
+    # -------------------------
+    odom0: /wheel_odom
+    odom0_differential: false
+    odom0_relative: false
+
+    # Use wheel odom for x, y and forward velocity only.
+    # DO NOT feed yaw or yaw_rate from wheel odom (encoder noise causes drift).
+    odom0_config: [
+      true,  true,  false,   # x, y, z
+      false, false, false,   # roll, pitch, yaw  (yaw OFF)
+      true,  false, false,   # vx ON, vy OFF, vz OFF
+      false, false, false,   # vroll, vpitch, vyaw OFF
+      false, false, false    # ax, ay, az
+    ]
+
+    # -------------------------
+    # IMU
+    # -------------------------
+    imu0: /imu/data
+    imu0_differential: false
+    imu0_relative: false
+    imu0_remove_gravitational_acceleration: true
+
+    # Use ONLY gyro z for heading stability.
+    # Disable accel for now (it often injects noise in 2D ground robots).
+    imu0_config: [
+      false, false, false,   # x, y, z
+      false, false, false,   # roll, pitch, yaw
+      false, false, false,   # vx, vy, vz
+      false, false, true,    # vyaw ON (gyro z)
+      false, false, false    # ax, ay, az OFF (enable later if you really want)
+    ]

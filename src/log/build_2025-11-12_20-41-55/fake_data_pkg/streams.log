@@ -1,4 +1,0 @@
-[0.282s] Invoking command in '/root/ros2_ws/build/fake_data_pkg': /usr/bin/cmake /root/ros2_ws/fake_data_pkg -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/fake_data_pkg
-[0.388s] [0mCMake Error: The source directory "/root/ros2_ws/fake_data_pkg" does not appear to contain CMakeLists.txt.
-[0.388s] Specify --help for usage, or press the help button on the CMake GUI.[0m
-[0.393s] Invoked command in '/root/ros2_ws/build/fake_data_pkg' returned '1': /usr/bin/cmake /root/ros2_ws/fake_data_pkg -DCATKIN_INSTALL_INTO_PREFIX_ROOT=0 -DCMAKE_INSTALL_PREFIX=/root/ros2_ws/install/fake_data_pkg

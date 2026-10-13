@@ -93,9 +93,7 @@ void processSerialInput();
 void setup(){
   // Initialize Serial Communication
   Serial.begin(115200); // Standard baud rate for ESP32
-  Serial.println("Motor Control Initialized.");
-  Serial.println("Enter motor speeds as 'A,B' (e.g., 255,-128). Max speed is 255.");
-  Serial.println("------------------------------------------------------------------");
+
 
   // --- ENCODER SETUP (MISSING) ---
   pinMode(BENCB , INPUT_PULLUP);
